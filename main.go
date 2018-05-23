@@ -2,28 +2,23 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"os/signal"
-	"runtime/debug"
-	"syscall"
+	"runtime"
+	"time"
 )
 
+func printLoop() {
+	time.Sleep(10 * time.Millisecond)
+
+	buf := make([]byte, 1<<16)
+	runtime.Stack(buf, true)
+	fmt.Printf("%s", buf)
+
+	printLoop()
+}
+
 func main() {
-	sigs := make(chan os.Signal, 1)
-	done := make(chan bool, 1)
 
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go printLoop()
 
-	go func() {
-		sig := <-sigs
-		fmt.Println()
-		fmt.Println(sig)
-		done <- true
-	}()
-
-	fmt.Println("awaiting signal")
-	debug.PrintStack()
-	<-done
-	debug.PrintStack()
-	fmt.Println("exiting")
+	fmt.Scanln()
 }
