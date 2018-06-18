@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/armon/go-radix"
 	"github.com/maruel/panicparse/stack"
 )
 
@@ -17,7 +18,7 @@ func (w nullWriter) Write(buf []byte) (int, error) {
 	return len(buf), nil
 }
 
-func sampleLoop(ctx context.Context) {
+func sampleLoop(ctx context.Context, watched *radix.Tree) {
 	buf := make([]byte, 1<<16)
 
 	for {
@@ -34,19 +35,34 @@ func sampleLoop(ctx context.Context) {
 			log.Println("parse stack error:", err)
 		}
 
-		fmt.Println(len(stackCtx.Goroutines))
+		for _, g := range stackCtx.Goroutines {
+			for _, c := range g.Signature.Stack.Calls {
+				if _, _, present := watched.LongestPrefix(c.Func.Raw); present {
+					fmt.Println(c.Func.Raw)
+					break
+				}
+			}
+		}
 	}
 }
 
-func StartMindsightCollector(ctx context.Context) {
-	go sampleLoop(ctx)
+func StartMindsightCollector(ctx context.Context, packages []string) {
+	watched := make(map[string]interface{})
+
+	for _, p := range packages {
+		watched[p] = nil
+	}
+
+	watchedRadixTree := radix.NewFromMap(watched)
+
+	go sampleLoop(ctx, watchedRadixTree)
 }
 
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	StartMindsightCollector(ctx)
+	StartMindsightCollector(ctx, []string{"main"})
 
 	fmt.Scanln()
 }
