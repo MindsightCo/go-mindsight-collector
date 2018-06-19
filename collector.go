@@ -3,10 +3,9 @@ package collector
 import (
 	"bytes"
 	"context"
+	"errors"
 	"log"
-	"os"
 	"runtime"
-	"strconv"
 	"time"
 
 	"github.com/armon/go-radix"
@@ -49,23 +48,63 @@ func sampleLoop(ctx context.Context, watched *radix.Tree, cache *sampleCache) {
 	}
 }
 
-func StartMindsightCollector(ctx context.Context, server string, packages []string) {
-	depth := DEFAULT_CACHE_DEPTH
-	depthEnv := os.Getenv("MINDSIGHT_SAMPLE_CACHE_SIZE")
+type Config struct {
+	server string
+	depth int
+	packages []string
+}
 
-	if depthEnv != "" {
-		// don't care if it doesn't parse, 0 it out
-		depth, _ = strconv.Atoi(depthEnv)
+func (c *Config) checkOptions() error {
+	if c.server == "" {
+		return errors.New("OptionAgentURL is required")
+	}
+
+	if len(c.packages) == 0 {
+		return errors.New("At least 1 package must be watched (OptionWatchPackage)")
+	}
+
+	return nil
+}
+
+type Option func(*Config)
+
+func OptionWatchPackage(pkg string) Option {
+	return func(c *Config) {
+		c.packages = append(c.packages, pkg)
+	}
+}
+
+func OptionAgentURL(url string) Option {
+	return func(c *Config) {
+		c.server = url
+	}
+}
+
+func OptionCacheDepth(depth int) Option {
+	return func(c *Config) {
+		c.depth = depth
+	}
+}
+
+func StartMindsightCollector(ctx context.Context, options ...Option) error {
+	config := new(Config)
+	for _, opt := range options {
+		opt(config)
+	}
+
+	if err := config.checkOptions(); err != nil {
+		return err
 	}
 
 	watched := make(map[string]interface{})
 
-	for _, p := range packages {
+	for _, p := range config.packages {
 		watched[p] = nil
 	}
 
 	watchedRadixTree := radix.NewFromMap(watched)
-	cache := newSampleCache(depth, server)
+	cache := newSampleCache(config.depth, config.server)
 
 	go sampleLoop(ctx, watchedRadixTree, cache)
+	return nil
 }

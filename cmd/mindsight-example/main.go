@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/MindsightCo/go-mindsight-collector"
@@ -14,7 +17,20 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	collector.StartMindsightCollector(ctx, "http://localhost:8000/samples/", []string{"github.com/MindsightCo/go-mindsight-collector"})
+	depth := 5
+	if depthEnv := os.Getenv("CACHE_DEPTH"); depthEnv != "" {
+		depth, _ = strconv.Atoi(depthEnv)
+	}
+
+	options := []collector.Option{
+		collector.OptionAgentURL("http://localhost:8000/samples/"),
+		collector.OptionCacheDepth(depth),
+		collector.OptionWatchPackage("github.com/MindsightCo/go-mindsight-collector"),
+	}
+
+	if err := collector.StartMindsightCollector(ctx, options...); err != nil {
+		log.Fatal(err)
+	}
 
 	fmt.Scanln()
 }
