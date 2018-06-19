@@ -18,9 +18,17 @@ import (
 )
 
 ... // in a function, such as main:
-StartMindsightCollector(context.Background(), "http://localhost:8000/samples/", []string{"github.com/you/your-package"})
+ctx := context.Background()
+collector.StartMindsightCollector(ctx,
+    collector.OptionAgentURL("http://localhost:8000/samples/"),
+    collector.OptionWatchPackage("github.com/you/your-package"),
+    collector.OptionWatchPackage("github.com/you/other-package"))
 ```
 
-The hotpaths for the packages provided in the third argument will be measured periodically and reported to the Mindsight backend via the [Mindsight Agent](https://github.com/MindsightCo/hotpath-agent).
+The hotpaths for the packages specified via `OptionWatchPackage` will be measured periodically and reported to the Mindsight backend via the [Mindsight Agent](https://github.com/MindsightCo/hotpath-agent).
 
-Feel free to provide your own [context](https://godoc.org/context) according to your needs. The collector will halt if the context receives a cancellation request.
+### Optional Configuration
+
+You can control how frequently samples are sent to the Agent via `collector.OptionCacheDepth()`.
+
+Feel free to provide your own [context](https://godoc.org/context) according to your needs. The collector will halt if the context receives a cancellation request (i.e. it respects `ctx.Done()`).
