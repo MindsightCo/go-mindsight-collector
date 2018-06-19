@@ -14,7 +14,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	collector.StartMindsightCollector(ctx, []string{"github.com/MindsightCo/go-mindsight-collector"})
+	collector.StartMindsightCollector(ctx, "http://localhost:8000/samples/", []string{"github.com/MindsightCo/go-mindsight-collector"})
 
 	fmt.Scanln()
 }

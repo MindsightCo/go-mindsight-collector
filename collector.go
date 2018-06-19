@@ -3,9 +3,10 @@ package collector
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"log"
+	"os"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/armon/go-radix"
@@ -18,7 +19,7 @@ func (w nullWriter) Write(buf []byte) (int, error) {
 	return len(buf), nil
 }
 
-func sampleLoop(ctx context.Context, watched *radix.Tree) {
+func sampleLoop(ctx context.Context, watched *radix.Tree, cache *sampleCache) {
 	buf := make([]byte, 1<<16)
 
 	for {
@@ -38,7 +39,9 @@ func sampleLoop(ctx context.Context, watched *radix.Tree) {
 		for _, g := range stackCtx.Goroutines {
 			for _, c := range g.Signature.Stack.Calls {
 				if _, _, present := watched.LongestPrefix(c.Func.Raw); present {
-					fmt.Println(c.Func.Raw)
+					if err := cache.recordSample(c.Func.Raw); err != nil {
+						log.Println("Error recording Mindsight sample:", err)
+					}
 					break
 				}
 			}
@@ -46,7 +49,15 @@ func sampleLoop(ctx context.Context, watched *radix.Tree) {
 	}
 }
 
-func StartMindsightCollector(ctx context.Context, packages []string) {
+func StartMindsightCollector(ctx context.Context, server string, packages []string) {
+	depth := DEFAULT_CACHE_DEPTH
+	depthEnv := os.Getenv("MINDSIGHT_SAMPLE_CACHE_SIZE")
+
+	if depthEnv != "" {
+		// don't care if it doesn't parse, 0 it out
+		depth, _ = strconv.Atoi(depthEnv)
+	}
+
 	watched := make(map[string]interface{})
 
 	for _, p := range packages {
@@ -54,6 +65,7 @@ func StartMindsightCollector(ctx context.Context, packages []string) {
 	}
 
 	watchedRadixTree := radix.NewFromMap(watched)
+	cache := newSampleCache(depth, server)
 
-	go sampleLoop(ctx, watchedRadixTree)
+	go sampleLoop(ctx, watchedRadixTree, cache)
 }
