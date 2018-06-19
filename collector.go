@@ -1,4 +1,4 @@
-package main
+package collector
 
 import (
 	"bytes"
@@ -56,13 +56,4 @@ func StartMindsightCollector(ctx context.Context, packages []string) {
 	watchedRadixTree := radix.NewFromMap(watched)
 
 	go sampleLoop(ctx, watchedRadixTree)
-}
-
-func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer cancel()
-
-	StartMindsightCollector(ctx, []string{"main"})
-
-	fmt.Scanln()
 }
