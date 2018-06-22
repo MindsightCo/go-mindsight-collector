@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 )
 
 const DEFAULT_CACHE_DEPTH = 100
@@ -14,14 +15,20 @@ type sampleCache struct {
 	depth     int
 	remaining int
 	url       string
+	rawQuery  string
 	samples   map[string]int
 }
 
-func newSampleCache(depth int, url string) *sampleCache {
+func newSampleCache(c *Config) *sampleCache {
+	query := url.Values{}
+	query.Set("project", c.project)
+	query.Set("environment", c.environment)
+
 	return &sampleCache{
-		depth:     depth,
-		remaining: depth,
-		url:       url,
+		depth:     c.depth,
+		remaining: c.depth,
+		url:       c.server,
+		rawQuery:  query.Encode(),
 		samples:   make(map[string]int),
 	}
 }
@@ -38,6 +45,7 @@ func (c *sampleCache) sendSamples() error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	req.URL.RawQuery = c.rawQuery
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

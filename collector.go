@@ -49,14 +49,20 @@ func sampleLoop(ctx context.Context, watched *radix.Tree, cache *sampleCache) {
 }
 
 type Config struct {
-	server string
-	depth int
-	packages []string
+	server      string
+	project     string
+	environment string
+	depth       int
+	packages    []string
 }
 
 func (c *Config) checkOptions() error {
 	if c.server == "" {
 		return errors.New("OptionAgentURL is required")
+	}
+
+	if c.project == "" {
+		return errors.New("OptionProject is required")
 	}
 
 	if len(c.packages) == 0 {
@@ -77,6 +83,18 @@ func OptionWatchPackage(pkg string) Option {
 func OptionAgentURL(url string) Option {
 	return func(c *Config) {
 		c.server = url
+	}
+}
+
+func OptionProject(projectName string) Option {
+	return func(c *Config) {
+		c.project = projectName
+	}
+}
+
+func OptionEnvironment(environment string) Option {
+	return func(c *Config) {
+		c.environment = environment
 	}
 }
 
@@ -103,7 +121,7 @@ func StartMindsightCollector(ctx context.Context, options ...Option) error {
 	}
 
 	watchedRadixTree := radix.NewFromMap(watched)
-	cache := newSampleCache(config.depth, config.server)
+	cache := newSampleCache(config)
 
 	go sampleLoop(ctx, watchedRadixTree, cache)
 	return nil
