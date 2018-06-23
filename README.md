@@ -2,6 +2,10 @@
 
 This utility can be plugged into your go application to collect vital data about your code's behavior so that Mindsight can help you write better code more safely, without significantly impacting your .
 
+## Installation
+
+You can install this package the standard way you install Go packages in your environment: `go get github.com/MindsightCo/go-mindsight-collector`.
+
 ## Configuration
 
 Before you get started, make sure you set up the [Mindsight Agent](https://github.com/MindsightCo/hotpath-agent), which is
