@@ -19,7 +19,9 @@ import (
 
 ... // in a function, such as main:
 ctx := context.Background()
-collector.StartMindsightCollector(ctx,
+err := collector.StartMindsightCollector(ctx,
+    collector.OptionProject("My-project"),
+    collector.OptionEnvironment("production"),
     collector.OptionAgentURL("http://localhost:8000/samples/"),
     collector.OptionWatchPackage("github.com/you/your-package"),
     collector.OptionWatchPackage("github.com/you/other-package"))
