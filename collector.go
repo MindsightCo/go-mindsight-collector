@@ -48,7 +48,7 @@ func sampleLoop(ctx context.Context, watched *radix.Tree, cache *sampleCache) {
 	}
 }
 
-type Config struct {
+type config struct {
 	server      string
 	project     string
 	environment string
@@ -56,7 +56,7 @@ type Config struct {
 	packages    []string
 }
 
-func (c *Config) checkOptions() error {
+func (c *config) checkOptions() error {
 	if c.server == "" {
 		return errors.New("OptionAgentURL is required")
 	}
@@ -72,56 +72,56 @@ func (c *Config) checkOptions() error {
 	return nil
 }
 
-type Option func(*Config)
+type option func(*config)
 
-func OptionWatchPackage(pkg string) Option {
-	return func(c *Config) {
+func OptionWatchPackage(pkg string) option {
+	return func(c *config) {
 		c.packages = append(c.packages, pkg)
 	}
 }
 
-func OptionAgentURL(url string) Option {
-	return func(c *Config) {
+func OptionAgentURL(url string) option {
+	return func(c *config) {
 		c.server = url
 	}
 }
 
-func OptionProject(projectName string) Option {
-	return func(c *Config) {
+func OptionProject(projectName string) option {
+	return func(c *config) {
 		c.project = projectName
 	}
 }
 
-func OptionEnvironment(environment string) Option {
-	return func(c *Config) {
+func OptionEnvironment(environment string) option {
+	return func(c *config) {
 		c.environment = environment
 	}
 }
 
-func OptionCacheDepth(depth int) Option {
-	return func(c *Config) {
+func OptionCacheDepth(depth int) option {
+	return func(c *config) {
 		c.depth = depth
 	}
 }
 
-func StartMindsightCollector(ctx context.Context, options ...Option) error {
-	config := new(Config)
+func StartMindsightCollector(ctx context.Context, options ...option) error {
+	cfg := new(config)
 	for _, opt := range options {
-		opt(config)
+		opt(cfg)
 	}
 
-	if err := config.checkOptions(); err != nil {
+	if err := cfg.checkOptions(); err != nil {
 		return err
 	}
 
 	watched := make(map[string]interface{})
 
-	for _, p := range config.packages {
+	for _, p := range cfg.packages {
 		watched[p] = nil
 	}
 
 	watchedRadixTree := radix.NewFromMap(watched)
-	cache := newSampleCache(config)
+	cache := newSampleCache(cfg)
 
 	go sampleLoop(ctx, watchedRadixTree, cache)
 	return nil

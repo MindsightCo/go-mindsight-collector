@@ -19,7 +19,7 @@ type sampleCache struct {
 	samples   map[string]int
 }
 
-func newSampleCache(c *Config) *sampleCache {
+func newSampleCache(c *config) *sampleCache {
 	query := url.Values{}
 	query.Set("project", c.project)
 	query.Set("environment", c.environment)

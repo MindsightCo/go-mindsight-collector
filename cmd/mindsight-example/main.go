@@ -22,13 +22,12 @@ func main() {
 		depth, _ = strconv.Atoi(depthEnv)
 	}
 
-	options := []collector.Option{
+	err := collector.StartMindsightCollector(ctx,
 		collector.OptionAgentURL("http://localhost:8000/samples/"),
+		collector.OptionProject("test-project"),
 		collector.OptionCacheDepth(depth),
-		collector.OptionWatchPackage("github.com/MindsightCo/go-mindsight-collector"),
-	}
-
-	if err := collector.StartMindsightCollector(ctx, options...); err != nil {
+		collector.OptionWatchPackage("github.com/MindsightCo/go-mindsight-collector"))
+	if err != nil {
 		log.Fatal(err)
 	}
 
