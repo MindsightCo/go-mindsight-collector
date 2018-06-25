@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/armon/go-radix"
@@ -18,7 +19,30 @@ func (w nullWriter) Write(buf []byte) (int, error) {
 	return len(buf), nil
 }
 
-func sampleLoop(ctx context.Context, watched *radix.Tree, cache *sampleCache) {
+type config struct {
+	server        string
+	project       string
+	environment   string
+	depth         int
+	includeVendor bool
+	packages      []string
+	watched       *radix.Tree
+	cache         *sampleCache
+}
+
+func (c *config) shouldSample(fn string) bool {
+	if _, _, present := c.watched.LongestPrefix(fn); !present {
+		return false
+	}
+
+	if c.includeVendor {
+		return true
+	}
+
+	return !strings.Contains(fn, "/vendor/")
+}
+
+func (c *config) sampleLoop(ctx context.Context) {
 	buf := make([]byte, 1<<16)
 
 	for {
@@ -36,9 +60,9 @@ func sampleLoop(ctx context.Context, watched *radix.Tree, cache *sampleCache) {
 		}
 
 		for _, g := range stackCtx.Goroutines {
-			for _, c := range g.Signature.Stack.Calls {
-				if _, _, present := watched.LongestPrefix(c.Func.Raw); present {
-					if err := cache.recordSample(c.Func.Raw); err != nil {
+			for _, call := range g.Signature.Stack.Calls {
+				if c.shouldSample(call.Func.Raw) {
+					if err := c.cache.recordSample(call.Func.Raw); err != nil {
 						log.Println("Error recording Mindsight sample:", err)
 					}
 					break
@@ -46,14 +70,6 @@ func sampleLoop(ctx context.Context, watched *radix.Tree, cache *sampleCache) {
 			}
 		}
 	}
-}
-
-type config struct {
-	server      string
-	project     string
-	environment string
-	depth       int
-	packages    []string
 }
 
 func (c *config) checkOptions() error {
@@ -104,6 +120,12 @@ func OptionCacheDepth(depth int) option {
 	}
 }
 
+func OptionIncludeVendor() option {
+	return func(c *config) {
+		c.includeVendor = true
+	}
+}
+
 func StartMindsightCollector(ctx context.Context, options ...option) error {
 	cfg := new(config)
 	for _, opt := range options {
@@ -120,9 +142,9 @@ func StartMindsightCollector(ctx context.Context, options ...option) error {
 		watched[p] = nil
 	}
 
-	watchedRadixTree := radix.NewFromMap(watched)
-	cache := newSampleCache(cfg)
+	cfg.watched = radix.NewFromMap(watched)
+	cfg.cache = newSampleCache(cfg)
 
-	go sampleLoop(ctx, watchedRadixTree, cache)
+	go cfg.sampleLoop(ctx)
 	return nil
 }

@@ -37,4 +37,6 @@ The hotpaths for the packages specified via `OptionWatchPackage` will be measure
 
 You can control how frequently samples are sent to the Agent via `collector.OptionCacheDepth()`.
 
+By default, vendored packages within the set of watched packages are not sampled. If you would like to include vendored packages in the data, set `collector.OptionIncludeVendor()`.
+
 Feel free to provide your own [context](https://godoc.org/context) according to your needs. The collector will halt if the context receives a cancellation request (i.e. it respects `ctx.Done()`).
